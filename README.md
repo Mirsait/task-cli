@@ -6,6 +6,8 @@ tasks directly from your terminal. It supports adding, updating, deleting, and
 filtering tasks, while storing all data in a local JSON file. The tool is 
 designed to be minimal, fast, and easy to integrate into any workflow.
 
+[task-cli](https://roadmap.sh/projects/task-tracker)
+
 ---
 
 ## Features
@@ -49,7 +51,7 @@ All tasks are stored in a local `tasks.json` file.
 
 ---
 
-## 🖥 Usage Examples
+### Usage Examples
 
 ```bash
 # Add a new task
@@ -120,14 +122,6 @@ sudo make install
 
 ```bash
 sudo make uninstall
-```
-
----
-
-## 🧪 Testing
-
-```bash
-go test ./...
 ```
 
 ---
