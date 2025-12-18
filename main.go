@@ -19,6 +19,13 @@ type Status = models.Status
 var available_commands = []string{
 	"add", "update", "delete", "list", "complete", "start", "help"}
 
+func loadData() ([]models.Task, error) {
+	return storage.Load("tasks.json")
+}
+func saveData(tasks []models.Task) error {
+	return storage.Save("tasks.json", tasks)
+}
+
 func main() {
 	Clear()
 	args := os.Args[1:]
@@ -49,14 +56,6 @@ func main() {
 		return
 	}
 
-	loadData := func() ([]models.Task, error) {
-		return storage.Load("tasks.json")
-	}
-
-	saveData := func(tasks []models.Task) error {
-		return storage.Save("tasks.json", tasks)
-	}
-
 	switch cmd {
 	case "add":
 		if len(args) != 2 {
@@ -77,6 +76,7 @@ func main() {
 		if err != nil {
 			log.Printf("Cannot save tasks: %v\n", err)
 		}
+		PrintTasks(tasks)
 		log.Println("Task created.")
 	case "delete":
 		if len(args) != 2 {
@@ -103,6 +103,7 @@ func main() {
 			log.Printf("Cannot save tasks: %v\n", err)
 			return
 		}
+		PrintTasks(tasks)
 		log.Printf("Task %d deleted.\n", id)
 	case "update":
 		if len(args) != 3 {
@@ -128,6 +129,7 @@ func main() {
 		if err != nil {
 			log.Printf("Cannot save tasks: %v", err)
 		}
+		PrintTasks(tasks)
 		log.Printf("Task %d updated.\n", id)
 	case "start":
 		if len(args) != 2 {
@@ -153,6 +155,7 @@ func main() {
 		if err != nil {
 			log.Printf("Cannot save tasks: %v", err)
 		}
+		PrintTasks(tasks)
 		log.Printf("Task %d started.\n", id)
 	case "complete":
 		if len(args) != 2 {
@@ -178,6 +181,7 @@ func main() {
 		if err != nil {
 			log.Printf("Cannot save tasks: %v", err)
 		}
+		PrintTasks(tasks)
 		log.Printf("Task %d completed.\n", id)
 	case "list":
 		tasks, err := loadData()
@@ -203,20 +207,6 @@ func main() {
 		PrintTasks(tasks)
 	default:
 		log.Println("Undefinded command")
-	}
-}
-
-func Clear() {
-	fmt.Print("\033[H\033[2J")
-}
-
-func PrintTasks(tasks []Task) {
-	fmt.Printf("task list: %d\n", len(tasks))
-	for _, t := range tasks {
-		prettyCreatedDate := t.CreatedAt.Format("02-01-2006 15:04")
-		prettyUpdatedDate := t.UpdatedAt.Format("02-01-2006 15:04")
-		fmt.Printf("%03d | %12s | %s | %s | %s\n",
-			t.Id, t.Status, prettyCreatedDate, prettyUpdatedDate, t.Description)
 	}
 }
 
