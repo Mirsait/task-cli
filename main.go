@@ -7,9 +7,17 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/Mirsait/task-cli/commands"
+	"github.com/Mirsait/task-cli/models"
+	"github.com/Mirsait/task-cli/storage"
 )
 
-var commands = []string{"add", "update", "delete", "list", "complete", "start", "help"}
+type Task = models.Task
+type Status = models.Status
+
+var available_commands = []string{
+	"add", "update", "delete", "list", "complete", "start", "help"}
 
 func main() {
 	Clear()
@@ -19,17 +27,17 @@ func main() {
 		log.Println("Run `task-cli help` to see available commands.")
 		return
 	}
-	command := args[0]
+	cmd := args[0]
 
-	if !slices.Contains(commands, command) {
-		log.Printf("Undefinded command: %s\n", command)
-		fmt.Println("Available commands: ", commands)
+	if !slices.Contains(available_commands, cmd) {
+		log.Printf("Undefinded command: %s\n", cmd)
+		fmt.Println("Available commands: ", available_commands)
 		return
 	}
 
-	if command == "help" {
+	if cmd == "help" {
 		fmt.Println("Available commands:")
-		fmt.Printf("%-32s - %s\n", "`add \"description\"`", "add new task with description")
+		fmt.Printf("%-32s - %s\n", "`add \"task description\"`", "add new task with description")
 		fmt.Printf("%-32s - %s\n", "`delete id`", "delete task by id")
 		fmt.Printf("%-32s - %s\n", "`update id new-description`", "update task's description")
 		fmt.Printf("%-32s - %s\n", "`complete id`", "mark task as completed")
@@ -41,73 +49,158 @@ func main() {
 		return
 	}
 
-	repo := Repository{filename: "tasks.json"}
-	repo.load()
+	loadData := func() ([]models.Task, error) {
+		return storage.Load("tasks.json")
+	}
 
-	switch command {
+	saveData := func(tasks []models.Task) error {
+		return storage.Save("tasks.json", tasks)
+	}
+
+	switch cmd {
 	case "add":
 		if len(args) != 2 {
-			log.Printf("Incorrect number of arguments; expected `add \"newDescription\"`\n")
+			log.Printf("Usage `task-cli add \"newDescription\"`\n")
 			return
 		}
-		repo.add(args[1])
+		tasks, err := loadData()
+		if err != nil {
+			log.Printf("Cannot load tasks: %v\n", err)
+			return
+		}
+		tasks, err = commands.Add(tasks, args[1])
+		if err != nil {
+			log.Printf("Cannot create task: %v\n", err)
+			return
+		}
+		err = saveData(tasks)
+		if err != nil {
+			log.Printf("Cannot save tasks: %v\n", err)
+		}
+		log.Println("Task created.")
 	case "delete":
 		if len(args) != 2 {
-			log.Printf("Incorrect number of arguments; expected `delete taskId` \n")
+			log.Println("Usage `task-cli delete taskId`")
 			return
 		}
 		id, err := ParseToInt(args[1])
 		if err != nil {
-			log.Printf("Error parsing the task's id: %s\n", args[1])
+			log.Printf("Invalid task id: %v\n", err)
 			return
 		}
-		repo.delete(id)
+		tasks, err := loadData()
+		if err != nil {
+			log.Printf("Cannot load tasks: %v\n", err)
+			return
+		}
+		tasks, err = commands.Delete(tasks, id)
+		if err != nil {
+			log.Printf("Cannot delete task: %v\n", err)
+			return
+		}
+		err = saveData(tasks)
+		if err != nil {
+			log.Printf("Cannot save tasks: %v\n", err)
+			return
+		}
+		log.Printf("Task %d deleted.\n", id)
 	case "update":
+		if len(args) != 3 {
+			log.Println("Usage `task-cli update id \"new description\"`")
+			return
+		}
 		id, err := ParseToInt(args[1])
 		if err != nil {
-			log.Printf("Error parsing the task's id: %s\n", args[1])
+			log.Printf("Incorrect task id: %v\n", err)
+			return
+		}
+		tasks, err := loadData()
+		if err != nil {
+			log.Fatalf("Failed to load tasks: %v", err)
 			return
 		}
 		newText := args[2]
-		if newText == "" {
-			log.Println("New task's description is empty.")
-			return
+		tasks, err = commands.Update(tasks, id, newText)
+		if err != nil {
+			log.Printf("Cannot update task: %v", err)
 		}
-		repo.update(id, newText)
+		err = saveData(tasks)
+		if err != nil {
+			log.Printf("Cannot save tasks: %v", err)
+		}
+		log.Printf("Task %d updated.\n", id)
 	case "start":
-		id, err := ParseToInt(args[1])
-		if err != nil {
-			log.Printf("Error parsing the task's id: %s\n", args[1])
+		if len(args) != 2 {
+			log.Println("Usage `task-cli start id`")
 			return
 		}
-		repo.mark(id, Progress)
+		id, err := ParseToInt(args[1])
+		if err != nil {
+			log.Printf("Incorrect task id: %v\n", err)
+			return
+		}
+		tasks, err := loadData()
+		if err != nil {
+			log.Printf("Cannot load taskss: %v", err)
+			return
+		}
+		tasks, err = commands.Mark(tasks, id, models.Progress)
+		if err != nil {
+			log.Printf("Cannot mark task: %v", err)
+			return
+		}
+		err = saveData(tasks)
+		if err != nil {
+			log.Printf("Cannot save tasks: %v", err)
+		}
+		log.Printf("Task %d started.\n", id)
 	case "complete":
-		id, err := ParseToInt(args[1])
-		if err != nil {
-			log.Printf("Error parsing the task's id: %s\n", args[1])
+		if len(args) != 2 {
+			log.Println("Usage `task-cli complete id`")
 			return
 		}
-		repo.mark(id, Done)
-	case "list":
-		if len(args) == 2 {
-			filter := args[1]
-			switch filter {
-			case "todo":
-				tasks := repo.filter(func(t Task) bool { return t.Status != Done })
-				PrintTasks(tasks)
-			case "done":
-				tasks := repo.filter(func(t Task) bool { return t.Status == Done })
-				PrintTasks(tasks)
-			case "in-progress":
-				tasks := repo.filter(func(t Task) bool { return t.Status == Progress })
-				PrintTasks(tasks)
-			default:
-				log.Println("Undefinded status: ", args[1])
-			}
-		} else {
-			tasks := repo.getAll()
-			PrintTasks(tasks)
+		id, err := ParseToInt(args[1])
+		if err != nil {
+			log.Printf("Incorrect task id: %v\n", err)
+			return
 		}
+		tasks, err := loadData()
+		if err != nil {
+			log.Printf("Cannot load taskss: %v", err)
+			return
+		}
+		tasks, err = commands.Mark(tasks, id, models.Done)
+		if err != nil {
+			log.Printf("Cannot mark task: %v", err)
+			return
+		}
+		err = saveData(tasks)
+		if err != nil {
+			log.Printf("Cannot save tasks: %v", err)
+		}
+		log.Printf("Task %d completed.\n", id)
+	case "list":
+		tasks, err := loadData()
+		if err != nil {
+			log.Printf("Cannot load tasks: %v", err)
+			return
+		}
+		filterFn := func(t Task) bool { return true }
+		if len(args) == 2 {
+			status := args[1]
+			switch status {
+			case "todo":
+				filterFn = func(t Task) bool { return t.Status != models.Done }
+			case "done":
+				filterFn = func(t Task) bool { return t.Status == models.Done }
+			case "in-progress":
+				filterFn = func(t Task) bool { return t.Status == models.Progress }
+			default:
+				log.Println("Undefinded status: ", status)
+			}
+		}
+		tasks = commands.Filter(tasks, filterFn)
+		PrintTasks(tasks)
 	default:
 		log.Println("Undefinded command")
 	}
@@ -118,6 +211,7 @@ func Clear() {
 }
 
 func PrintTasks(tasks []Task) {
+	fmt.Printf("task list: %d\n", len(tasks))
 	for _, t := range tasks {
 		prettyCreatedDate := t.CreatedAt.Format("02-01-2006 15:04")
 		prettyUpdatedDate := t.UpdatedAt.Format("02-01-2006 15:04")
