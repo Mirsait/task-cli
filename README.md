@@ -6,11 +6,11 @@ tasks directly from your terminal. It supports adding, updating, deleting, and
 filtering tasks, while storing all data in a local JSON file. The tool is 
 designed to be minimal, fast, and easy to integrate into any workflow.
 
-[task-cli](https://roadmap.sh/projects/task-tracker)
+[roadmap.sh](https://roadmap.sh/projects/task-tracker)
 
 ---
 
-## Features
+## ✨ Features
 
 ### Task Management
 - Add new tasks with a description.
@@ -32,7 +32,7 @@ You can list:
 
 ---
 
-## Data Storage
+## 💾 Data Storage
 
 All tasks are stored in a local `tasks.json` file.
 
@@ -51,7 +51,7 @@ All tasks are stored in a local `tasks.json` file.
 
 ---
 
-### Usage Examples
+## 📘 Usage Examples
 
 ```bash
 # Add a new task
@@ -84,7 +84,7 @@ task-cli list in-progress
 
 ---
 
-## Technologies
+## 🛠 Technologies
 
 - Command‑line interface (CLI)
 - JSON-based persistent storage
@@ -93,24 +93,30 @@ task-cli list in-progress
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 task-cli/
-│
 ├── go.mod
-├── tasks.json
 ├── main.go
-├── repository.go
-├── file.go
-├── task.go
+├── commands
+│   ├── add.go
+│   ├── delete.go
+│   ├── update.go
+│   ├── mark.go
+│   └── filter.go
+├── storage
+│   ├── load.go
+│   └── save.go
+├── models
+│   └── task.go
 ├── Makefile
 └── README.md
 ```
 
 ---
 
-## Installation
+## 📦 Installation
 
 ```bash
 git clone https://github.com/Mirsait/task-cli
@@ -118,7 +124,7 @@ cd task-cli
 sudo make install
 ```
 
-## Uninstall
+## 🗑 Uninstall
 
 ```bash
 sudo make uninstall
